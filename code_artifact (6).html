@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>【紅尻川賊仔事件】</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Iansui (芫荽字型) & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Iansui&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* 全頁字型與禁止滾動條設定 (100dvh 滿版) */
+        html, body {
+            height: 100dvh;
+            width: 100vw;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Iansui', 'Inter', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        /* 黃色圓點點點背景 */
+        .polka-dot-bg {
+            background-color: #FEF9C3; /* 柔和亮黃底色 */
+            background-image: radial-gradient(#FACC15 3.5px, transparent 3.5px),
+                              radial-gradient(#FDE047 3.5px, #FEF9C3 3.5px);
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+        }
+
+        /* 卡片懸停與點擊微動畫 */
+        .fruit-card {
+            transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease, opacity 0.3s ease;
+        }
+        .fruit-card:hover {
+            transform: translateY(-4px) scale(1.02);
+        }
+        .fruit-card:active {
+            transform: scale(0.97);
+        }
+
+        /* 已抽過的卡片標記樣式 */
+        .card-drawn {
+            opacity: 0.48;
+            filter: grayscale(25%);
+        }
+
+        /* 拉霸滾輪上下快速滑動特效 */
+        @keyframes slotSlide {
+            0% {
+                transform: translateY(-32%) scale(0.94);
+                opacity: 0.55;
+                filter: blur(1.5px);
+            }
+            100% {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+                filter: blur(0);
+            }
+        }
+        .animate-slot-slide {
+            animation: slotSlide 0.08s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        /* 中獎定格彈跳特效 */
+        @keyframes winPop {
+            0% {
+                transform: scale(0.85);
+            }
+            60% {
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        .animate-win-pop {
+            animation: winPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+    </style>
+</head>
+<body class="polka-dot-bg flex flex-col justify-between p-2 sm:p-4 md:p-5 text-slate-800">
+
+    <!-- 頂部標題與控制列 -->
+    <header class="w-full max-w-6xl mx-auto flex items-center justify-between bg-white/90 backdrop-blur-md px-4 py-2 sm:px-6 sm:py-3 rounded-2xl shadow-md border-2 border-amber-300 shrink-0">
+        <div class="flex items-center gap-2 sm:gap-3">
+            <span class="text-2xl sm:text-3xl">🐒</span>
+            <h1 class="text-xl sm:text-2xl md:text-3xl font-bold tracking-wider text-amber-900">
+                【紅尻川賊仔事件】
+            </h1>
+        </div>
+
+        <div class="flex items-center gap-2 sm:gap-4">
+            <!-- 複習進度條 -->
+            <div class="hidden sm:flex items-center gap-2 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-200">
+                <span class="text-sm font-semibold text-amber-800">抽卡進度</span>
+                <div class="w-24 md:w-32 h-3 bg-amber-200 rounded-full overflow-hidden">
+                    <div id="progressBar" class="h-full bg-amber-500 transition-all duration-300 rounded-full" style="width: 0%;"></div>
+                </div>
+                <span id="progressText" class="text-sm font-bold text-amber-900">0 / 6</span>
+            </div>
+
+            <!-- 隨機抽卡按鈕 -->
+            <button id="drawBtn" type="button" class="px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold rounded-xl shadow-md active:scale-95 transition flex items-center gap-1.5 text-sm sm:text-base cursor-pointer">
+                <span>🎰</span>
+                <span>拉霸抽卡</span>
+            </button>
+
+            <!-- 重置按鈕 -->
+            <button id="resetBtn" type="button" title="重新開始" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl border border-slate-300 active:scale-95 transition cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- 中央卡片網格主區域 (2列 x 3欄 = 6張) -->
+    <main id="cardsContainer" class="w-full max-w-6xl mx-auto flex-1 flex flex-col justify-center gap-3 sm:gap-4 md:gap-5 my-2 sm:my-3 min-h-0">
+        <!-- 卡片將透過 JavaScript 動態渲染於此 -->
+    </main>
+
+    <!-- 底部操作提示列 -->
+    <footer class="w-full max-w-6xl mx-auto text-center shrink-0">
+        <div class="inline-flex items-center gap-2 bg-white/85 backdrop-blur-sm px-4 py-1 rounded-full border border-amber-300 text-xs sm:text-sm text-amber-900 shadow-sm">
+            <span>💡 提示：點擊任意處、右鍵、空白鍵或簡報筆，即可啟動 3 秒拉霸抽卡；抽完再按一下可連續抽下一張！</span>
+        </div>
+    </footer>
+
+    <!-- 拉霸與放大檢視彈出視窗 (Modal) -->
+    <div id="focusModal" class="fixed inset-0 z-50 hidden bg-slate-900/75 backdrop-blur-md flex items-center justify-center p-4 sm:p-6">
+        <div id="modalBox" class="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border-4 border-amber-400 p-4 sm:p-6 flex flex-col items-center justify-between overflow-hidden">
+            
+            <!-- 視窗頂部狀態列 -->
+            <div class="w-full flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2 bg-amber-50 px-3.5 py-1.5 rounded-full border border-amber-200">
+                    <span id="statusDot" class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping"></span>
+                    <span id="modalProgressText" class="text-sm sm:text-base font-bold text-amber-900">隨機抽卡中...</span>
+                </div>
+
+                <!-- 關閉返回總覽按鈕 -->
+                <button id="closeModalBtn" type="button" title="返回總覽 (Esc)" class="w-10 h-10 rounded-full bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-600 flex items-center justify-center font-bold text-xl transition cursor-pointer">
+                    ✕
+                </button>
+            </div>
+
+            <!-- 拉霸展示框 -->
+            <div class="w-full aspect-[4/3] max-h-[62dvh] bg-slate-50 rounded-2xl border-4 border-amber-200 overflow-hidden flex items-center justify-center relative shadow-inner">
+                <div id="slotStrip" class="w-full h-full flex items-center justify-center p-2 sm:p-4">
+                    <!-- 動態圖片或占位提示顯示區 -->
+                </div>
+            </div>
+
+            <!-- 視窗底部快捷操作提示 -->
+            <div class="mt-3 text-xs sm:text-sm text-slate-500 font-medium">
+                按簡報筆 / 空白鍵 / 點擊畫面可繼續抽下一張 · 按右上角 ✕ 或 Esc 返回總覽
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 卡片資料配置：2列 x 3張 = 共 6 張 PNG 照片
+        const DEFAULT_ROW_GROUPS = [
+            [
+                { fileId: '975', label: '975.png' },
+                { fileId: '976', label: '976.png' },
+                { fileId: '977', label: '977.png' }
+            ],
+            [
+                { fileId: '975', label: '975.png' },
+                { fileId: '979', label: '979.png' },
+                { fileId: '980', label: '980.png' }
+            ]
+        ];
+
+        // 兩列的專屬主題色系（琥珀黃、翡翠綠）
+        function getRegionTheme(rowIndex) {
+            const themes = [
+                {
+                    border: 'border-amber-400',
+                    bg: 'bg-white',
+                    badge: 'bg-amber-100 text-amber-800',
+                    shadow: 'shadow-amber-200/70'
+                },
+                {
+                    border: 'border-emerald-400',
+                    bg: 'bg-white',
+                    badge: 'bg-emerald-100 text-emerald-800',
+                    shadow: 'shadow-emerald-200/70'
+                }
+            ];
+            return themes[rowIndex % themes.length];
+        }
+
+        // 全域狀態管理
+        let allItems = [];
+        let drawnIds = new Set();
+        let isSpinning = false;
+        let spinInterval = null;
+        let audioCtx = null;
+
+        // 初始化平鋪卡片清單（為每張卡片建立唯一索引 key，支援重複檔名如 975.png）
+        function initItems() {
+            allItems = [];
+            DEFAULT_ROW_GROUPS.forEach((row, rIdx) => {
+                row.forEach((item, cIdx) => {
+                    allItems.push({
+                        uniqueKey: `r${rIdx}_c${cIdx}`,
+                        rowIndex: rIdx,
+                        colIndex: cIdx,
+                        item: item
+                    });
+                });
+            });
+        }
+
+        // 初始化 Web Audio API 音效合成器（無需外部音檔）
+        function ensureAudioContext() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) {
+                    audioCtx = new AudioContext();
+                }
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        // 播放拉霸滾動滴答聲
+        function playTickSound(freq = 400, duration = 0.045, type = 'sine') {
+            try {
+                ensureAudioContext();
+                if (!audioCtx) return;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch (e) {
+                // 忽略瀏覽器未互動前的音效限制
+            }
+        }
+
+        // 播放抽中卡片的歡樂和弦音效
+        function playWinSound() {
+            try {
+                ensureAudioContext();
+                if (!audioCtx) return;
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                notes.forEach((freq, idx) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'triangle';
+                    const startTime = audioCtx.currentTime + idx * 0.07;
+                    osc.frequency.setValueAtTime(freq, startTime);
+                    gain.gain.setValueAtTime(0.18, startTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.35);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(startTime);
+                    osc.stop(startTime + 0.35);
+                });
+            } catch (e) {
+                // 忽略音效異常
+            }
+        }
+
+        // 渲染主畫面所有卡片
+        function renderCards() {
+            const container = document.getElementById('cardsContainer');
+            container.innerHTML = '';
+
+            DEFAULT_ROW_GROUPS.forEach((row, rIdx) => {
+                const theme = getRegionTheme(rIdx);
+                const rowEl = document.createElement('div');
+                rowEl.className = 'grid grid-cols-3 gap-3 sm:gap-4 md:gap-6 flex-1 min-h-0';
+
+                row.forEach((item, cIdx) => {
+                    const uniqueKey = `r${rIdx}_c${cIdx}`;
+                    const isDrawn = drawnIds.has(uniqueKey);
+
+                    const card = document.createElement('div');
+                    card.className = `fruit-card relative ${theme.bg} rounded-2xl sm:rounded-3xl border-4 ${theme.border} shadow-lg ${theme.shadow} overflow-hidden flex items-center justify-center p-2 sm:p-3 cursor-pointer h-full min-h-0 ${isDrawn ? 'card-drawn' : ''}`;
+                    
+                    // 點擊特定卡片亦可啟動拉霸並停在該卡片
+                    card.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if (isSpinning) return;
+                        openCardFocus(uniqueKey, item);
+                    });
+
+                    // 已抽過徽章標示
+                    if (isDrawn) {
+                        const badge = document.createElement('div');
+                        badge.className = 'absolute top-2 right-2 z-10 bg-emerald-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow';
+                        badge.textContent = '✓ 已抽過';
+                        card.appendChild(badge);
+                    }
+
+                    // 圖片元素
+                    const img = document.createElement('img');
+                    img.src = `${item.fileId}.png`;
+                    img.alt = item.label;
+                    img.className = 'w-full h-full object-contain rounded-xl pointer-events-none';
+                    
+                    // 若找不到對應 PNG 檔，顯示乾淨的檔名提示框
+                    img.onerror = function() {
+                        this.style.display = 'none';
+                        const fallback = document.createElement('div');
+                        fallback.className = 'w-full h-full flex flex-col items-center justify-center bg-slate-50 rounded-xl border-2 border-dashed border-slate-300 text-slate-400 p-2 text-center';
+                        fallback.innerHTML = `
+                            <span class="text-2xl sm:text-3xl mb-1">🖼️</span>
+                            <span class="text-xs sm:text-sm font-bold text-slate-500">請放入 ${item.fileId}.png</span>
+                        `;
+                        card.appendChild(fallback);
+                    };
+
+                    card.appendChild(img);
+                    rowEl.appendChild(card);
+                });
+
+                container.appendChild(rowEl);
+            });
+
+            updateProgress();
+        }
+
+        // 更新頂部進度條
+        function updateProgress() {
+            const total = allItems.length;
+            const current = drawnIds.size;
+            const percent = total > 0 ? Math.round((current / total) * 100) : 0;
+
+            const bar = document.getElementById('progressBar');
+            const text = document.getElementById('progressText');
+            if (bar) bar.style.width = `${percent}%`;
+            if (text) text.textContent = `${current} / ${total}`;
+        }
+
+        // 在彈出視窗中顯示單張卡片內容（支援滾動動畫或最終中獎定格動畫）
+        function displayFinalCardInModal(container, item, isFinal = false, isSliding = false) {
+            container.innerHTML = '';
+            const wrapper = document.createElement('div');
+            wrapper.className = `w-full h-full flex items-center justify-center ${isSliding ? 'animate-slot-slide' : ''} ${isFinal ? 'animate-win-pop' : ''}`;
+
+            const img = document.createElement('img');
+            img.src = `${item.fileId}.png`;
+            img.alt = item.label;
+            img.className = 'w-full h-full object-contain rounded-xl';
+
+            img.onerror = function() {
+                this.style.display = 'none';
+                const fallback = document.createElement('div');
+                fallback.className = 'w-full h-full flex flex-col items-center justify-center bg-white rounded-2xl border-2 border-dashed border-amber-300 text-slate-500 p-4 text-center';
+                fallback.innerHTML = `
+                    <span class="text-5xl mb-3">🖼️</span>
+                    <span class="text-xl sm:text-2xl font-bold text-amber-800">請放入 ${item.fileId}.png</span>
+                `;
+                wrapper.appendChild(fallback);
+            };
+
+            wrapper.appendChild(img);
+            container.appendChild(wrapper);
+        }
+
+        // 開啟視窗並啟動 3 秒漸進減速拉霸動畫
+        function openCardFocus(uniqueKey, targetItem) {
+            if (isSpinning) return;
+
+            const modal = document.getElementById('focusModal');
+            const slotStrip = document.getElementById('slotStrip');
+            const statusDot = document.getElementById('statusDot');
+            const modalProgressText = document.getElementById('modalProgressText');
+
+            modal.classList.remove('hidden');
+
+            // 啟動 3 秒拉霸轉動
+            isSpinning = true;
+            statusDot.className = 'w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping';
+            modalProgressText.textContent = '隨機抽卡中...';
+
+            const duration = 3000; // 3 秒拉霸時間
+            const startTime = Date.now();
+            let lastIndex = -1;
+
+            function spinStep() {
+                const elapsed = Date.now() - startTime;
+                if (elapsed >= duration) {
+                    // 停止轉動並定格於抽出的卡片
+                    isSpinning = false;
+                    drawnIds.add(uniqueKey);
+                    renderCards();
+
+                    statusDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500';
+                    modalProgressText.textContent = `抽中卡片！ (${drawnIds.size} / ${allItems.length}) · 再按一次抽下一張`;
+                    displayFinalCardInModal(slotStrip, targetItem, true, false);
+                    playWinSound();
+                    return;
+                }
+
+                // 確保每次切換皆顯示不同的預覽卡片，提升視覺滾動感
+                let nextIndex = Math.floor(Math.random() * allItems.length);
+                if (allItems.length > 1 && nextIndex === lastIndex) {
+                    nextIndex = (nextIndex + 1) % allItems.length;
+                }
+                lastIndex = nextIndex;
+
+                const randomPreview = allItems[nextIndex].item;
+                displayFinalCardInModal(slotStrip, randomPreview, false, true);
+
+                // 前 1.5 秒高速飛轉，後 1.5 秒平滑漸進減速
+                const progress = elapsed / duration;
+                let stepDelay = 55;
+
+                if (progress > 0.5) {
+                    const slowProgress = (progress - 0.5) / 0.5;
+                    stepDelay = Math.round(55 + Math.pow(slowProgress, 2.3) * 365);
+                }
+
+                // 音調隨減速微幅上揚，增添緊張刺激感
+                const tickFreq = progress > 0.5 ? 360 + ((progress - 0.5) * 320) : 340 + Math.random() * 120;
+                playTickSound(tickFreq, 0.045, 'sine');
+
+                spinInterval = setTimeout(spinStep, stepDelay);
+            }
+
+            spinStep();
+        }
+
+        // 隨機抽取尚未抽過的卡片（若全部抽完則自動重置新一輪）
+        function drawRandomCard() {
+            if (isSpinning) return;
+
+            let available = allItems.filter(entry => !drawnIds.has(entry.uniqueKey));
+            if (available.length === 0) {
+                // 全部抽完後自動開啟新一輪
+                drawnIds.clear();
+                renderCards();
+                available = [...allItems];
+            }
+
+            const chosen = available[Math.floor(Math.random() * available.length)];
+            openCardFocus(chosen.uniqueKey, chosen.item);
+        }
+
+        // 關閉彈出視窗回到總覽
+        function closeModal() {
+            if (spinInterval) {
+                clearTimeout(spinInterval);
+                spinInterval = null;
+            }
+            isSpinning = false;
+            const modal = document.getElementById('focusModal');
+            modal.classList.add('hidden');
+        }
+
+        // 頁面載入後初始化與綁定事件
+        window.addEventListener('DOMContentLoaded', () => {
+            initItems();
+            renderCards();
+
+            // 頂部拉霸抽卡按鈕
+            document.getElementById('drawBtn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (isSpinning) return;
+                drawRandomCard();
+            });
+
+            // 頂部重置進度按鈕
+            document.getElementById('resetBtn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (isSpinning) return;
+                drawnIds.clear();
+                renderCards();
+                playTickSound(520, 0.08, 'triangle');
+            });
+
+            // 關閉視窗按鈕
+            document.getElementById('closeModalBtn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                closeModal();
+            });
+
+            // 點擊畫面任意處（包含彈窗開啟定格狀態下）直接抽下一張
+            document.body.addEventListener('click', () => {
+                if (isSpinning) return;
+                drawRandomCard();
+            });
+
+            // 滑鼠右鍵直接抽下一張
+            document.body.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                if (isSpinning) return;
+                drawRandomCard();
+            });
+
+            // 鍵盤與簡報筆支援（Space、Enter、PageDown、ArrowRight、ArrowDown 皆可連續抽卡；Esc 關閉視窗）
+            document.addEventListener('keydown', (e) => {
+                if (isSpinning) return;
+                const modal = document.getElementById('focusModal');
+                const isModalOpen = !modal.classList.contains('hidden');
+
+                if (e.key === 'Escape') {
+                    if (isModalOpen) closeModal();
+                    return;
+                }
+
+                if ([' ', 'Enter', 'ArrowRight', 'PageDown', 'ArrowDown'].includes(e.key)) {
+                    e.preventDefault();
+                    drawRandomCard();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
